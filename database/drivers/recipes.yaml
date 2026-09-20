@@ -1,19 +1,43 @@
 # Human-readable mirror of the executable recipe registry in src/maclinux/recipes.py.
-# A recipe is not proof of support: real build/test evidence is required.
+# Version lists are explicit recipe constraints, not proof of hardware support.
 recipes:
   facetimehd:
     build_system: kbuild/dkms
+    distributions:
+      ubuntu: ["20.04", "22.04", "24.04", "26.04"]
+      debian: ["11", "12", "13"]
+      altlinux: ["p10", "p11"]
+      fedora: ["40", "41", "42", "43"]
+      arch: ["rolling"]
+      opensuse: ["Leap 15.6", "Leap 16", "Tumbleweed"]
     architectures: [x86_64]
     kernel_min: "4.0"
     firmware: [facetimehd-firmware]
     modules: [facetimehd]
+    hardware_ids: ["14e4:1570"]
+
   applespi:
     build_system: kbuild/dkms
+    distributions:
+      ubuntu: ["20.04", "22.04", "24.04", "26.04"]
+      debian: ["11", "12", "13"]
+      altlinux: ["p10", "p11"]
+      fedora: ["40", "41", "42", "43"]
+      arch: ["rolling"]
+      opensuse: ["Leap 15.6", "Leap 16", "Tumbleweed"]
     architectures: [x86_64, aarch64]
     kernel_min: "4.0"
     modules: [applespi]
+
   snd_hda_macbookpro:
     build_system: kbuild
+    distributions:
+      ubuntu: ["20.04", "22.04", "24.04", "26.04"]
+      debian: ["11", "12", "13"]
+      altlinux: ["p10", "p11"]
+      fedora: ["40", "41", "42", "43"]
+      arch: ["rolling"]
+      opensuse: ["Leap 15.6", "Leap 16", "Tumbleweed"]
     architectures: [x86_64]
     kernel_min: "4.0"
     modules: [snd-hda-macbookpro]
