@@ -1,0 +1,107 @@
+"""Validation of built Linux kernel module artifacts.
+
+The validator is deliberately conservative: a .ko is only considered valid when
+its ELF architecture, module name and kernel ABI metadata can be inspected.
+Symbol/dependency checks are best-effort because tooling differs by distro.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import shutil
+import subprocess
+from dataclasses import dataclass, asdict
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class ArtifactResult:
+    path: str
+    status: str
+    module: str
+    architecture: str
+    vermagic: str
+    depends: tuple[str, ...]
+    errors: tuple[str, ...]
+    warnings: tuple[str, ...]
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+def _run(args: list[str]) -> tuple[int, str, str]:
+    try:
+        p = subprocess.run(args, text=True, capture_output=True, check=False, shell=False)
+        return p.returncode, p.stdout.strip(), p.stderr.strip()
+    except OSError as exc:
+        return 127, "", str(exc)
+
+
+def _expected_elf_machine(architecture: str) -> str | None:
+    return {
+        "x86_64": "Advanced Micro Devices X86-64",
+        "aarch64": "AArch64",
+        "armv7l": "ARM",
+        "riscv64": "RISC-V",
+        "ppc64le": "PowerPC64",
+        "s390x": "IBM S/390",
+        "loongarch64": "LoongArch",
+    }.get(architecture)
+
+
+def _elf_machine(path: Path) -> str | None:
+    readelf = shutil.which("readelf")
+    if not readelf:
+        return None
+    rc, out, _ = _run([readelf, "-h", str(path)])
+    if rc:
+        return None
+    match = re.search(r"^\s*Machine:\s*(.+)$", out, re.M)
+    return match.group(1).strip() if match else None
+
+
+def _modinfo(path: Path, field: str) -> str | None:
+    modinfo = shutil.which("modinfo")
+    if not modinfo:
+        return None
+    rc, out, _ = _run([modinfo, "-F", field, str(path)])
+    return out if rc == 0 else None
+
+
+def validate_artifact(
+    path: str,
+    *,
+    expected_module: str | None = None,
+    expected_architecture: str | None = None,
+    expected_vermagic: str | None = None,
+) -> ArtifactResult:
+    artifact = Path(path)
+    errors: list[str] = []
+    warnings: list[str] = []
+    module = artifact.name.removesuffix(".ko")
+    if not artifact.is_file():
+        return ArtifactResult(path, "invalid", module, "", "", (), ("artifact does not exist",), ())
+    if artifact.suffix != ".ko":
+        errors.append("artifact is not a .ko module")
+    machine = _elf_machine(artifact) or ""
+    expected_machine = _expected_elf_machine(expected_architecture or "") if expected_architecture else None
+    if expected_machine and machine and expected_machine.lower() not in machine.lower():
+        errors.append(f"ELF architecture mismatch: expected {expected_machine}, got {machine}")
+    if expected_machine and not machine:
+        warnings.append("readelf is unavailable; ELF architecture was not verified")
+    reported_name = _modinfo(artifact, "name")
+    if reported_name and expected_module and reported_name != expected_module:
+        errors.append(f"module name mismatch: expected {expected_module}, got {reported_name}")
+    if expected_module and not reported_name:
+        warnings.append("modinfo is unavailable or could not read module metadata")
+    vermagic = _modinfo(artifact, "vermagic") or ""
+    if expected_vermagic and vermagic and expected_vermagic not in vermagic:
+        errors.append("kernel vermagic mismatch")
+    elif expected_vermagic and not vermagic:
+        warnings.append("module vermagic was not available for verification")
+    depends_raw = _modinfo(artifact, "depends") or ""
+    depends = tuple(x for x in depends_raw.split(",") if x)
+    status = "invalid" if errors else ("valid-with-warnings" if warnings else "valid")
+    return ArtifactResult(str(artifact), status, reported_name or module, machine,
+                          vermagic, depends, tuple(errors), tuple(warnings))
