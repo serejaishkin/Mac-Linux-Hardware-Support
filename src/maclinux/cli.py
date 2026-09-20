@@ -149,6 +149,19 @@ def cmd_plan(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_test(args: argparse.Namespace) -> int:
+    from .validation import validate
+    components = [args.component] if args.component else None
+    results = validate(components)
+    if args.json:
+        print(json.dumps([item.to_dict() for item in results], indent=2, ensure_ascii=False))
+        return 0 if all(item.status != "fail" for item in results) else 1
+    for item in results:
+        detail = item.evidence or item.reason
+        print(f"{item.component}: {item.check}: {item.status}" + (f" — {detail}" if detail else ""))
+    return 0 if all(item.status != "fail" for item in results) else 1
+
+
 def cmd_repair(args: argparse.Namespace) -> int:
     if os.geteuid() != 0:
         print("repair requires root privileges; diagnostic commands do not.")
@@ -178,6 +191,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("plan", help="build a safe compatibility/install plan")
     p.set_defaults(func=cmd_plan)
+
+    p = sub.add_parser("test", help="run non-invasive functional hardware checks")
+    p.add_argument("component", nargs="?")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_test)
 
     p = sub.add_parser("repair", help="repair a hardware component")
     p.add_argument("component")
