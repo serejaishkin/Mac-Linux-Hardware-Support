@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 from dataclasses import dataclass, asdict
-from pathlib import Path
 
+from .artifacts import validate_artifact
 from .kernel import detect_kernel
 from .platform import PlatformInfo
-from .recipes import Recipe, get_recipe, recipe_status
+from .recipes import get_recipe, recipe_status
 from .sources import get_source
 
 
@@ -37,7 +36,8 @@ def plan_build(driver: str, info: PlatformInfo, *, source_dir: str | None = None
     kernel = detect_kernel(info.kernel_tree or None)
     blockers: list[str] = []
     notes: list[str] = []
-    status = recipe_status(recipe, distribution=info.distribution, architecture=info.architecture, kernel=info.kernel)
+    status = recipe_status(recipe, distribution=info.distribution,
+                           architecture=info.architecture, kernel=info.kernel)
     if recipe is None:
         blockers.append("no build recipe")
     if not info.kernel_tree:
@@ -45,6 +45,12 @@ def plan_build(driver: str, info: PlatformInfo, *, source_dir: str | None = None
         status = "blocked"
     if info.compiler == "unknown":
         blockers.append("gcc or clang not found")
+        status = "blocked"
+    if recipe and not kernel.config_present:
+        blockers.append("kernel configuration not found")
+        status = "blocked"
+    if recipe and not kernel.modules_symvers_present:
+        blockers.append("Module.symvers not found; exported-symbol ABI cannot be verified")
         status = "blocked"
     if recipe and info.distribution not in recipe.distributions:
         blockers.append(f"distribution {info.distribution} is not covered by recipe")
@@ -54,20 +60,17 @@ def plan_build(driver: str, info: PlatformInfo, *, source_dir: str | None = None
         blockers.append("source provenance is missing")
     if source and source.proprietary:
         blockers.append("proprietary source cannot be fetched automatically")
+    if source_dir and not os.path.isdir(source_dir):
+        blockers.append("source directory does not exist")
     if recipe and recipe.firmware:
         notes.append("firmware is a separate input; build success does not prove firmware availability or compatibility")
     root = source_dir or f"drivers/src/{driver}"
     commands: tuple[tuple[str, ...], ...] = ()
     if recipe and not blockers:
-        commands = (
-            ("make", "-C", info.kernel_tree, "M=" + os.path.abspath(root), "modules"),
-        )
-    return BuildPlan(
-        driver=driver, status=status, source=source.to_dict() if source else None,
-        recipe=recipe.to_dict() if recipe else None, platform=info.to_dict(),
-        kernel=kernel.to_dict(), commands=commands,
-        output_modules=recipe.modules if recipe else (), blockers=tuple(blockers), notes=tuple(notes),
-    )
+        commands = (("make", "-C", info.kernel_tree, "M=" + os.path.abspath(root), "modules"),)
+    return BuildPlan(driver, status, source.to_dict() if source else None,
+                     recipe.to_dict() if recipe else None, info.to_dict(), kernel.to_dict(),
+                     commands, recipe.modules if recipe else (), tuple(blockers), tuple(notes))
 
 
 def execute_build(plan: BuildPlan, *, execute: bool = False) -> dict:
@@ -86,4 +89,15 @@ def execute_build(plan: BuildPlan, *, execute: bool = False) -> dict:
                         "stdout": proc.stdout[-4000:], "stderr": proc.stderr[-4000:]})
         if proc.returncode:
             return {"status": "build-failed", "executed": True, "results": results}
-    return {"status": "built", "executed": True, "results": results}
+    artifacts = []
+    for module in plan.output_modules:
+        for command in plan.commands:
+            source_root = next((part[2:] for part in command if part.startswith("M=")), "")
+            candidate = os.path.join(source_root, module + ".ko")
+            result = validate_artifact(candidate, expected_module=module,
+                                       expected_architecture=plan.platform.get("architecture"),
+                                       expected_vermagic=plan.kernel.get("vermagic") or None)
+            artifacts.append(result.to_dict())
+    if any(a["status"] == "invalid" for a in artifacts):
+        return {"status": "artifact-invalid", "executed": True, "results": results, "artifacts": artifacts}
+    return {"status": "built", "executed": True, "results": results, "artifacts": artifacts}
