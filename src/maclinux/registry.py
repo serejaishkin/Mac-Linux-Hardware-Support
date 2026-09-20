@@ -37,12 +37,12 @@ DEVICES = {
 
 MODEL_COMPONENTS = {
     "MacBookPro11,1": {
-        "camera": {"drivers": ["facetimehd"], "notes": ["Exact camera ID and firmware must be validated."]},
-        "wifi": {"drivers": ["brcmfmac", "broadcom-wl"], "notes": ["Select by exact PCI ID and kernel support; never install both blindly."]},
+        "camera": {"drivers": ["facetimehd"], "notes": ["PCI 14e4:1570 is the known FaceTime HD integration; firmware/calibration remains separate."]},
+        "wifi": {"drivers": ["broadcom-wl"], "notes": ["For BCM4360 14e4:43a0 the Linux Wireless table maps the device to wl; exact subsystem/revision must still be detected."]},
         "bluetooth": {"drivers": ["btusb", "bluetooth-broadcom"], "notes": ["Resolve from USB identity and firmware state."]},
-        "audio": {"drivers": ["snd-hda-intel", "snd-hda-codec-cirrus", "snd_hda_macbookpro"], "notes": ["Mainline HDA/Cirrus first; external only after functional validation."]},
-        "keyboard": {"drivers": ["hid-apple", "applespi"], "notes": ["Select from actual HID/SPI topology."]},
-        "trackpad": {"drivers": ["bcm5974", "applespi"], "notes": ["Select from actual USB/SPI topology."]},
+        "audio": {"drivers": ["snd-hda-intel", "snd-hda-codec-cirrus"], "notes": ["MacBookPro11,1 uses Cirrus CS4208; use the mainline mbp11 fixup first. snd_hda_macbookpro targets CS8409 systems and is not a default recipe for this model."]},
+        "keyboard": {"drivers": ["hid-apple"], "notes": ["MacBookPro11,1 is a pre-SPI-Apple-keyboard generation; confirm actual HID topology."]},
+        "trackpad": {"drivers": ["bcm5974"], "notes": ["MacBookPro11,1 uses the older USB Apple multi-touch path; confirm actual USB topology."]},
         "smc-thermal-fans": {"drivers": ["applesmc", "thermal"], "notes": ["Validate sensors, fan control and thermal zones separately."]},
         "graphics": {"drivers": ["i915"], "notes": ["Validate DRM acceleration, modesetting and backlight."]},
         "storage": {"drivers": ["nvme", "ahci"], "notes": ["Resolve from actual controller and block-device topology."]},
