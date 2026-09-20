@@ -107,6 +107,48 @@ def sysfs_buses() -> dict[str, int]:
     return result
 
 
+def sysfs_devices(bus: str) -> list[dict[str, str]]:
+    """Return stable identity/driver information from a sysfs bus.
+
+    This deliberately avoids writing to sysfs and does not assume that every
+    Apple internal device is PCI or USB.
+    """
+    root = Path("/sys/bus") / bus / "devices"
+    result = []
+    if not root.is_dir():
+        return result
+    for item in sorted(root.iterdir(), key=lambda p: p.name):
+        record = {"bus": bus, "address": item.name}
+        for key in ("modalias", "uevent", "vendor", "device", "class"):
+            value = _read(str(item / key))
+            if value:
+                record[key] = value
+        driver = item / "driver"
+        if driver.is_symlink():
+            try:
+                record["driver"] = driver.resolve().name
+            except OSError:
+                pass
+        result.append(record)
+    return result
+
+
+def platform_devices() -> list[dict[str, str]]:
+    return sysfs_devices("platform")
+
+
+def hid_devices() -> list[dict[str, str]]:
+    return sysfs_devices("hid")
+
+
+def spi_devices() -> list[dict[str, str]]:
+    return sysfs_devices("spi")
+
+
+def i2c_devices() -> list[dict[str, str]]:
+    return sysfs_devices("i2c")
+
+
 def detect() -> dict:
     info = dmi()
     model = info["product_name"] or "unknown"
@@ -121,6 +163,10 @@ def detect() -> dict:
         "usb_devices": usb_devices(),
         "loaded_modules": loaded_modules(),
         "sysfs_buses": sysfs_buses(),
+        "platform_devices": platform_devices(),
+        "hid_devices": hid_devices(),
+        "spi_devices": spi_devices(),
+        "i2c_devices": i2c_devices(),
     }
 
 
