@@ -46,6 +46,21 @@ def _system(result: dict) -> dict:
     }
 
 
+def cmd_platform(args: argparse.Namespace) -> int:
+    info = detect_platform()
+    print(json.dumps(info.to_dict(), indent=2, ensure_ascii=False))
+    return 0
+
+
+def cmd_build(args: argparse.Namespace) -> int:
+    info = detect_platform()
+    plan = plan_build(args.driver, info, source_dir=args.source_dir)
+    result = execute_build(plan, execute=args.execute)
+    output = {"plan": plan.to_dict(), "execution": result}
+    print(json.dumps(output, indent=2, ensure_ascii=False))
+    return 0 if result["status"] in {"dry-run", "built"} else 1
+
+
 def cmd_detect(args: argparse.Namespace) -> int:
     result = _system(detect())
     if args.json:
@@ -198,6 +213,15 @@ def cmd_repair(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="maclinux")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("platform", help="detect distribution, package ecosystem and kernel build environment")
+    p.set_defaults(func=cmd_platform)
+
+    p = sub.add_parser("build", help="plan or execute a driver build")
+    p.add_argument("driver")
+    p.add_argument("--source-dir")
+    p.add_argument("--execute", action="store_true", help="actually run the build command")
+    p.set_defaults(func=cmd_build)
 
     p = sub.add_parser("detect", help="detect Mac model and hardware")
     p.add_argument("--json", action="store_true")
