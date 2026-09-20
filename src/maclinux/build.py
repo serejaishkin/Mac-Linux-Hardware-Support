@@ -102,7 +102,8 @@ def execute_build(plan: BuildPlan, *, execute: bool = False) -> dict:
             result = validate_artifact(candidate, expected_module=module,
                                        expected_architecture=plan.platform.get("architecture"),
                                        expected_vermagic=plan.kernel.get("vermagic") or None,
-                                       exported_symbols=set(plan.kernel.get("symvers", {}).keys()) or None)
+                                       exported_symbols=set(plan.kernel.get("symvers", {}).keys()) or None,
+                                       exported_symbol_crcs={k: v[0] for k, v in plan.kernel.get("symvers", {}).items()} or None)
             artifacts.append(result.to_dict())
     if any(a["status"] == "invalid" for a in artifacts):
         return {"status": "artifact-invalid", "executed": True, "results": results, "artifacts": artifacts}
