@@ -86,3 +86,18 @@ def package_plan(distribution: str, driver: str, source: str = "external") -> Pa
         notes = ("No automatic installation is supported for this distribution yet.",)
 
     return PackagePlan(ecosystem, tuple(packages), tuple(commands), tuple(notes))
+
+
+
+def repair_transaction(plan: PackagePlan, *, dry_run: bool = True) -> dict:
+    """Create an auditable transaction plan; never execute privileged operations."""
+    return {
+        "mode": "dry-run" if dry_run else "blocked",
+        "safe_to_execute": False,
+        "commands": list(plan.commands) + list(plan.module_commands),
+        "rollback": "restore package/module state from the recorded preflight snapshot",
+        "preflight": ["re-detect model, architecture and kernel", "verify package-manager availability",
+                      "verify matching kernel development files", "verify driver architecture compatibility",
+                      "verify firmware state separately", "record current driver/module bindings"],
+        "reason": "Privileged repair execution is not enabled yet.",
+    }
