@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import os
 import platform
 import re
 import subprocess
 from pathlib import Path
 
+from .hardware import HardwareDevice
 from .registry import DEVICES, MODELS
 
 
@@ -35,26 +35,76 @@ def dmi() -> dict[str, str]:
 
 
 def lspci_devices() -> list[dict[str, str]]:
-    output = command_output("lspci", "-nn")
+    # -nnk includes the currently bound kernel driver when available.
+    output = command_output("lspci", "-nnk")
     devices = []
-    pattern = re.compile(r"(?P<slot>[0-9a-f:.]+).*?\[(?P<class>[0-9a-f]{4})\]:.*?\[(?P<vendor>[0-9a-f]{4}):(?P<device>[0-9a-f]{4})\]")
+    current: dict[str, str] | None = None
+    pattern = re.compile(
+        r"(?P<slot>[0-9a-f:.]+).*?\[(?P<class>[0-9a-f]{4})\]:.*?\[(?P<vendor>[0-9a-f]{4}):(?P<device>[0-9a-f]{4})\]"
+    )
     for line in output.splitlines():
         match = pattern.search(line)
-        if not match:
+        if match:
+            if current:
+                devices.append(current)
+            current = {
+                "slot": match.group("slot"),
+                "class": match.group("class"),
+                "vendor_id": match.group("vendor").lower(),
+                "device_id": match.group("device").lower(),
+                "raw": line.strip(),
+            }
+            current["pci_id"] = f"{current['vendor_id']}:{current['device_id']}"
+            current["known"] = current["pci_id"] in DEVICES
+            if current["known"]:
+                current["integration"] = DEVICES[current["pci_id"]]["id"]
             continue
-        item = {
-            "slot": match.group("slot"),
-            "class": match.group("class"),
-            "vendor_id": match.group("vendor").lower(),
-            "device_id": match.group("device").lower(),
-            "raw": line.strip(),
-        }
-        item["pci_id"] = f"{item['vendor_id']}:{item['device_id']}"
-        item["known"] = item["pci_id"] in DEVICES
-        if item["known"]:
-            item["integration"] = DEVICES[item["pci_id"]]["id"]
-        devices.append(item)
+        if current:
+            driver = re.search(r"Kernel driver in use:\s*(\S+)", line)
+            module = re.search(r"Kernel modules:\s*(.+)", line)
+            if driver:
+                current["driver"] = driver.group(1)
+            if module:
+                current["module"] = module.group(1).strip()
+    if current:
+        devices.append(current)
     return devices
+
+
+def usb_devices() -> list[dict[str, str]]:
+    output = command_output("lsusb")
+    result = []
+    pattern = re.compile(
+        r"ID\s+(?P<vendor>[0-9a-f]{4}):(?P<product>[0-9a-f]{4})\s*(?P<name>.*)$",
+        re.I,
+    )
+    for line in output.splitlines():
+        match = pattern.search(line)
+        if match:
+            result.append(
+                {
+                    "vendor_id": match.group("vendor").lower(),
+                    "device_id": match.group("product").lower(),
+                    "name": match.group("name").strip(),
+                    "raw": line.strip(),
+                }
+            )
+    return result
+
+
+def loaded_modules() -> list[str]:
+    modules = _read("/proc/modules")
+    return [line.split(" ", 1)[0] for line in modules.splitlines() if line]
+
+
+def sysfs_buses() -> dict[str, int]:
+    result = {}
+    root = Path("/sys/bus")
+    if root.is_dir():
+        for item in root.iterdir():
+            if item.is_dir():
+                result[item.name] = len(list((item / "devices").iterdir())) if (item / "devices").is_dir() else 0
+    return result
 
 
 def detect() -> dict:
@@ -68,22 +118,37 @@ def detect() -> dict:
         "model": model,
         "model_known": model in MODELS,
         "devices": lspci_devices(),
+        "usb_devices": usb_devices(),
+        "loaded_modules": loaded_modules(),
+        "sysfs_buses": sysfs_buses(),
     }
 
 
-def module_loaded(module: str) -> bool:
-    modules = _read("/proc/modules")
-    return any(line.split(" ", 1)[0] == module for line in modules.splitlines())
+def hardware_devices(result: dict) -> list[HardwareDevice]:
+    return [HardwareDevice(**{
+        "bus": "pci",
+        "address": item.get("slot", ""),
+        "vendor_id": item.get("vendor_id"),
+        "device_id": item.get("device_id"),
+        "class_id": item.get("class"),
+        "name": item.get("raw"),
+        "driver": item.get("driver"),
+        "module": item.get("module"),
+    }) for item in result.get("devices", [])]
+
+
+def module_loaded(module: str, system: dict | None = None) -> bool:
+    modules = system.get("loaded_modules", []) if system else loaded_modules()
+    return module in modules
 
 
 def firmware_candidates(name: str) -> list[str]:
     roots = [
-        "/lib/firmware/facetimehd",
-        "/usr/lib/firmware/facetimehd",
+        Path(f"/lib/firmware/{name}"),
+        Path(f"/usr/lib/firmware/{name}"),
     ]
     result = []
     for root in roots:
-        path = Path(root)
-        if path.is_dir():
-            result.extend(str(p) for p in sorted(path.iterdir()) if p.is_file())
+        if root.is_dir():
+            result.extend(str(p) for p in sorted(root.iterdir()) if p.is_file())
     return result
