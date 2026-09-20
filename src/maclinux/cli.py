@@ -151,15 +151,25 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 
 def cmd_test(args: argparse.Namespace) -> int:
-    from .validation import validate
     components = [args.component] if args.component else None
     results = validate(components)
+    system = _system(detect())
+    plans = resolve(system, hardware_devices(system))
+    if args.component:
+        plans = [p for p in plans if p["component"] == args.component]
+    correlated = correlate_resolution(plans, results)
     if args.json:
-        print(json.dumps([item.to_dict() for item in results], indent=2, ensure_ascii=False))
+        print(json.dumps({"model": system["model"], "kernel": system["kernel"],
+                          "architecture": system["architecture"], "components": correlated},
+                         indent=2, ensure_ascii=False))
         return 0 if all(item.status != "fail" for item in results) else 1
     for item in results:
         detail = item.evidence or item.reason
         print(f"{item.component}: {item.check}: {item.status}" + (f" — {detail}" if detail else ""))
+    for plan in correlated:
+        candidates = ", ".join(plan.get("candidates", [])) or "none"
+        binding = ", ".join((x.get("module") or x.get("driver") or "unbound") for x in plan.get("binding", [])) or "not detected"
+        print(f"  resolution: {candidates}; binding: {binding}; validation: {plan['validation']}")
     return 0 if all(item.status != "fail" for item in results) else 1
 
 
