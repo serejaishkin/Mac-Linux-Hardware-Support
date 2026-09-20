@@ -1,0 +1,19 @@
+# Human-readable mirror of the executable recipe registry in src/maclinux/recipes.py.
+# A recipe is not proof of support: real build/test evidence is required.
+recipes:
+  facetimehd:
+    build_system: kbuild/dkms
+    architectures: [x86_64]
+    kernel_min: "4.0"
+    firmware: [facetimehd-firmware]
+    modules: [facetimehd]
+  applespi:
+    build_system: kbuild/dkms
+    architectures: [x86_64, aarch64]
+    kernel_min: "4.0"
+    modules: [applespi]
+  snd_hda_macbookpro:
+    build_system: kbuild
+    architectures: [x86_64]
+    kernel_min: "4.0"
+    modules: [snd-hda-macbookpro]
