@@ -10,8 +10,9 @@ import shutil
 from .compat import compatibility
 from .detect import detect, firmware_candidates, hardware_devices, module_loaded
 from .registry import DEVICES, DRIVER_SOURCES
-from .packaging import package_plan
+from .packaging import package_plan, repair_transaction
 from .resolver import resolve
+from .validation import correlate_resolution, validate
 
 
 def _distro() -> str:
@@ -163,13 +164,22 @@ def cmd_test(args: argparse.Namespace) -> int:
 
 
 def cmd_repair(args: argparse.Namespace) -> int:
-    if os.geteuid() != 0:
-        print("repair requires root privileges; diagnostic commands do not.")
+    """Print an auditable repair transaction; never execute it yet."""
+    result = _system(detect())
+    plans = resolve(result, hardware_devices(result))
+    selected = [p for p in plans if p["component"] == args.component]
+    if not selected:
+        print(f"Unknown component: {args.component}")
         return 2
-    print(f"Repair workflow for {args.component} is not enabled yet.")
-    print("Run: maclinux resolve")
-    print("Installation remains intentionally read-only until distro adapters and validation are complete.")
-    return 3
+    transactions = []
+    for candidate in selected[0].get("candidates", []):
+        pkg = package_plan(result["distribution"], candidate)
+        transactions.append({"driver": candidate, "package_plan": pkg.to_dict(),
+                             "transaction": repair_transaction(pkg, dry_run=True)})
+    print(json.dumps({"component": args.component, "model": result["model"],
+                      "architecture": result["architecture"], "kernel": result["kernel"],
+                      "transactions": transactions}, indent=2, ensure_ascii=False))
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
