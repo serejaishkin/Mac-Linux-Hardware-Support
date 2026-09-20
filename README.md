@@ -22,7 +22,7 @@ The first reference platform is **MacBookPro11,1** (Late 2013 / 13-inch Retina).
 
 Initial hardware areas: FaceTime HD camera, Broadcom Wi-Fi/Bluetooth, Cirrus audio, Intel Iris 5100 graphics, keyboard/trackpad, SMC, battery, thermal, backlight, NVMe, Thunderbolt and suspend/resume.
 
-The first implementation milestone starts with hardware detection and the FaceTime HD camera stack.
+The current implementation milestone is the hardware compatibility engine: inventory, exact hardware identification and model-aware driver resolution across the full Apple hardware stack. Camera support is only one integration among many.
 
 ## Architecture
 
