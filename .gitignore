@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.o
+*.ko
+*.mod
+*.mod.c
+*.cmd
+*.tmp
+build/
+dist/
+*.log
+.vscode/
+.idea/
