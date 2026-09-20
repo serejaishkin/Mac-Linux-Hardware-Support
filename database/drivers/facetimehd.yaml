@@ -1,0 +1,39 @@
+id: facetimehd
+name: FaceTime HD camera Linux integration
+upstream: facetimehd
+kernel_interface: v4l2
+architectures:
+  - x86_64
+
+hardware:
+  vendor: Broadcom
+  component: FaceTime HD camera
+  models:
+    - MacBookPro11,1
+
+firmware:
+  required: true
+  extraction: required-or-documented
+  validation: planned
+
+compatibility:
+  kernel: version-dependent
+  status: investigation
+
+distributions:
+  - deb
+  - alt
+  - rpm
+  - arch
+  - generic
+
+tests:
+  detection: planned
+  firmware: planned
+  v4l2: planned
+  browser: planned
+  suspend_resume: planned
+
+notes:
+  - Prefer the existing Linux facetimehd/bcwc_pcie ecosystem over a new driver implementation.
+  - Kernel API compatibility and packaging are part of this project.
