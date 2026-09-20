@@ -1,4 +1,6 @@
+from maclinux.artifacts import validate_artifact
 from maclinux.build import execute_build, plan_build
+from maclinux.kernel import KernelInfo
 from maclinux.platform import detect_platform
 
 
@@ -22,3 +24,9 @@ def test_unknown_driver_is_blocked():
     plan = plan_build("unknown-driver", info)
     assert plan.status == "unknown"
     assert "no build recipe" in plan.blockers
+
+
+def test_artifact_missing_is_invalid():
+    result = validate_artifact("/definitely/missing/module.ko", expected_module="module")
+    assert result.status == "invalid"
+    assert "artifact does not exist" in result.errors
