@@ -22,6 +22,7 @@ class KernelInfo:
     compiler: str
     localversion: str
     vermagic: str
+    config: dict[str, str]
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -47,6 +48,22 @@ def _module_vermagic() -> str:
         return ""
 
 
+def _kernel_config(tree: str, release: str) -> dict[str, str]:
+    candidates = (f"{tree}/.config", f"/boot/config-{release}")
+    path = next((p for p in candidates if os.path.isfile(p)), "")
+    if not path:
+        return {}
+    values: dict[str, str] = {}
+    for line in _read(path).splitlines():
+        if line.startswith("CONFIG_") and "=" in line:
+            key, value = line.split("=", 1)
+            values[key] = value.strip()
+        elif line.startswith("# CONFIG_") and line.endswith(" is not set"):
+            key = line[2:-len(" is not set")].strip()
+            values[key] = "n"
+    return values
+
+
 def detect_kernel(build_tree: str | None = None) -> KernelInfo:
     release = platform.release()
     tree = build_tree or f"/lib/modules/{release}/build"
@@ -58,18 +75,29 @@ def detect_kernel(build_tree: str | None = None) -> KernelInfo:
     compiler = _read(f"{tree}/include/generated/compile.h")
     symvers = os.path.isfile(f"{tree}/Module.symvers")
     vermagic = _module_vermagic()
+    values = _kernel_config(tree, release)
     return KernelInfo(
         release=release,
         version=_extract_kernel_version(makefile, generated_release or release),
         architecture=platform.machine(),
         build_tree=tree if os.path.isdir(tree) else "",
         headers_present=os.path.isdir(tree),
-        config_present=os.path.exists(config) or os.path.exists(f"{tree}/.config"),
+        config_present=bool(values) or os.path.exists(config),
         modules_symvers_present=symvers,
         compiler=compiler[:200],
         localversion=local[:200],
         vermagic=vermagic[:200],
+        config=values,
     )
+
+
+def required_config_missing(info: KernelInfo, requirements: tuple[str, ...]) -> tuple[str, ...]:
+    missing = []
+    for requirement in requirements:
+        value = info.config.get(requirement)
+        if value not in {"y", "m"}:
+            missing.append(requirement)
+    return tuple(missing)
 
 
 def _extract_kernel_version(makefile: str, fallback: str) -> str:
