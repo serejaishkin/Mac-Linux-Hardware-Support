@@ -23,6 +23,8 @@ class KernelInfo:
     localversion: str
     vermagic: str
     config: dict[str, str]
+    compiler_id: str
+    symvers: dict[str, tuple[str, str, str, str]]
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -34,6 +36,26 @@ def _read(path: str) -> str:
             return fh.read().strip()
     except OSError:
         return ""
+
+
+def _compiler_id(tree: str) -> str:
+    text = _read(f"{tree}/include/generated/compile.h")
+    match = re.search(r'LINUX_COMPILER\\s+"([^"]+)"', text)
+    return match.group(1).strip() if match else ""
+
+
+def _symvers(tree: str) -> dict[str, tuple[str, str, str, str]]:
+    path = f"{tree}/Module.symvers"
+    if not os.path.isfile(path):
+        return {}
+    values = {}
+    for line in _read(path).splitlines():
+        fields = line.split()
+        if len(fields) >= 4:
+            crc, symbol, module, export = fields[:4]
+            namespace = fields[4] if len(fields) >= 5 else ""
+            values[symbol] = (crc, module, export, namespace)
+    return values
 
 
 def _module_vermagic() -> str:
@@ -76,6 +98,8 @@ def detect_kernel(build_tree: str | None = None) -> KernelInfo:
     symvers = os.path.isfile(f"{tree}/Module.symvers")
     vermagic = _module_vermagic()
     values = _kernel_config(tree, release)
+    compiler_id = _compiler_id(tree)
+    symvers_map = _symvers(tree)
     return KernelInfo(
         release=release,
         version=_extract_kernel_version(makefile, generated_release or release),
@@ -88,6 +112,8 @@ def detect_kernel(build_tree: str | None = None) -> KernelInfo:
         localversion=local[:200],
         vermagic=vermagic[:200],
         config=values,
+        compiler_id=compiler_id,
+        symvers=symvers_map,
     )
 
 
