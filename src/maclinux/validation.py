@@ -122,3 +122,24 @@ def validate(components: Iterable[str] | None = None) -> list[TestResult]:
     for component in selected:
         results.extend(validate_component(component))
     return results
+
+
+
+def correlate_resolution(plans: list[dict], test_results: Iterable[TestResult]) -> list[dict]:
+    """Join resolved driver/module evidence with functional results without mutation."""
+    grouped: dict[str, list[TestResult]] = {}
+    for result in test_results:
+        grouped.setdefault(result.component, []).append(result)
+    output = []
+    for plan in plans:
+        component = plan["component"]
+        evidence = plan.get("hardware", [])
+        binding = [{"address": d.get("address"), "driver": d.get("driver"), "module": d.get("module")}
+                   for d in evidence if d.get("driver") or d.get("module")]
+        tests = grouped.get(component, [])
+        if any(t.status == "fail" for t in tests): state = "functional-fail"
+        elif any(t.status == "pass" for t in tests): state = "functional-pass"
+        elif tests and all(t.status == "skip" for t in tests): state = "functional-skip"
+        else: state = "functional-unknown"
+        output.append({**plan, "binding": binding, "functional": [t.to_dict() for t in tests], "validation": state})
+    return output
