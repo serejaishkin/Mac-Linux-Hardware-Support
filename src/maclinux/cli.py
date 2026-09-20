@@ -102,7 +102,7 @@ def cmd_resolve(args: argparse.Namespace) -> int:
 
 def cmd_diagnose(args: argparse.Namespace) -> int:
     result = _system(detect())
-    print("Mac Linux Hardware Support 0.2.0")
+    print("Mac Linux Hardware Support 0.7.0")
     print(f"Model: {result['model']}")
     print(f"Kernel: {result['kernel']}")
     print(f"Architecture: {result['architecture']}")
