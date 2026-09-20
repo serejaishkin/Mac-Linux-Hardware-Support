@@ -91,6 +91,9 @@ def _kernel_config(tree: str, release: str) -> dict[str, str]:
 def detect_kernel(build_tree: str | None = None) -> KernelInfo:
     release = platform.release()
     tree = build_tree or f"/lib/modules/{release}/build"
+    tree_release = _read(f"{tree}/include/config/kernel.release")
+    if tree_release:
+        release = tree_release.splitlines()[0].strip()
     config = f"/boot/config-{release}"
     makefile = _read(f"{tree}/Makefile")
     generated_release = _read(f"{tree}/include/config/kernel.release")
