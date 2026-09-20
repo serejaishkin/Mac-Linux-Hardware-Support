@@ -1,0 +1,9 @@
+# CPU architectures are a separate dimension from Linux distribution/package ecosystem.
+architectures:
+  - x86_64
+  - aarch64
+  - armv7l
+  - riscv64
+  - ppc64le
+  - s390x
+  - loongarch64
