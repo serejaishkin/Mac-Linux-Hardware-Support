@@ -7,32 +7,72 @@ architectures:
   - x86_64
 status: reference-platform
 
-devices:
-  camera:
-    component: facetime-hd
-    integration: facetimehd
-    bus: pci
-    status: investigation
-  wifi:
-    component: broadcom
-    status: investigation
-  bluetooth:
-    component: broadcom
-    status: investigation
-  audio:
-    component: cirrus-cs4208
-    status: investigation
+hardware:
+  cpu:
+    family: Intel Haswell
   gpu:
-    component: intel-iris-5100
-    status: upstream-validation
-  thunderbolt:
-    component: thunderbolt
-    status: upstream-validation
+    integrated: Intel Iris 5100
+    driver: i915
+  camera:
+    device: broadcom-facetimehd
+    pci_id: 14e4:1570
+    driver: facetimehd
+  wifi:
+    driver_selection: detect-by-pci
+    candidates:
+      - brcmfmac
+      - broadcom-wl
+  bluetooth:
+    driver_selection: detect-by-usb
+    candidates:
+      - btusb
+      - broadcom-firmware
+  audio:
+    codec: cirrus-cs4208
+    drivers:
+      - snd-hda-intel
+      - snd-hda-codec-cirrus
+  keyboard:
+    candidates:
+      - hid-apple
+      - applespi
+  trackpad:
+    candidates:
+      - bcm5974
+      - applespi
+  smc:
+    driver: applesmc
   storage:
-    component: nvme
-    status: upstream-validation
+    candidates:
+      - nvme
+      - ahci
+  thunderbolt:
+    driver: thunderbolt
+  display:
+    backlight: linux-backlight
+  power:
+    subsystems:
+      - thermal
+      - hwmon
+      - cpufreq
+      - suspend-resume
 
 testing:
   distributions:
     - ubuntu
     - altlinux
+  planned:
+    - fedora
+    - debian
+    - arch
+    - opensuse
+    - alpine
+    - gentoo
+
+validation:
+  required:
+    - device-detection
+    - driver-binding
+    - firmware
+    - functional-test
+    - suspend-resume
