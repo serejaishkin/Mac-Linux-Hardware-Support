@@ -1,0 +1,16 @@
+# Kernel compatibility is tracked independently from distro releases.
+kernel:
+  discovery:
+    running: uname -r
+    build_tree: /lib/modules/{release}/build
+    config: /boot/config-{release}
+  module_validation:
+    required:
+      - ELF
+      - architecture
+      - vermagic
+      - exported-symbol-resolution
+  policy:
+    unknown_kernel: unknown
+    missing_build_tree: blocked
+    out_of_range: patch-required
