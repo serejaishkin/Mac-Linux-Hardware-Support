@@ -1,0 +1,19 @@
+devices:
+  - id: 14e4:1570
+    vendor: Broadcom
+    name: 720p FaceTime HD Camera
+    class: multimedia
+    driver: facetimehd
+    firmware: facetimehd-firmware
+    architectures:
+      - x86_64
+    models:
+      - MacBookPro11,1
+      - MacBookPro11,2
+      - MacBookPro11,3
+      - MacBookPro11,4
+      - MacBookPro11,5
+      - MacBookAir6,1
+      - MacBookAir6,2
+      - MacBookAir7,1
+      - MacBookAir7,2
