@@ -7,7 +7,7 @@ import subprocess
 from dataclasses import dataclass, asdict
 
 from .artifacts import validate_artifact
-from .kernel import detect_kernel
+from .kernel import detect_kernel, required_config_missing
 from .platform import PlatformInfo
 from .recipes import get_recipe, recipe_status
 from .sources import get_source
@@ -49,6 +49,11 @@ def plan_build(driver: str, info: PlatformInfo, *, source_dir: str | None = None
     if recipe and not kernel.config_present:
         blockers.append("kernel configuration not found")
         status = "blocked"
+    if recipe and kernel.config_present:
+        missing_config = required_config_missing(kernel, recipe.kernel_config)
+        if missing_config:
+            blockers.append("required kernel config missing: " + ", ".join(missing_config))
+            status = "blocked"
     if recipe and not kernel.modules_symvers_present:
         blockers.append("Module.symvers not found; exported-symbol ABI cannot be verified")
         status = "blocked"
