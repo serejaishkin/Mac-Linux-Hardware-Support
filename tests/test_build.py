@@ -2,6 +2,7 @@ from maclinux.artifacts import validate_artifact
 from maclinux.build import execute_build, plan_build
 from maclinux.kernel import KernelInfo
 from maclinux.platform import detect_platform
+from maclinux.workspace import source_sha256
 
 
 def test_build_is_dry_run_by_default():
@@ -66,3 +67,13 @@ def test_artifact_crc_mismatch_is_reported(monkeypatch, tmp_path):
     )
     assert result.status == "invalid"
     assert "CRC mismatch" in result.errors[-1]
+
+
+def test_source_sha256_is_stable(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "Makefile").write_text("obj-m := demo.o\n", encoding="utf-8")
+    first = source_sha256(str(source))
+    second = source_sha256(str(source))
+    assert first == second
+    assert len(first) == 64
