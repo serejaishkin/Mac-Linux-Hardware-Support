@@ -1,35 +1,17 @@
 # Non-invasive functional checks. Commands are optional; validators may use sysfs directly.
 version: 1
 components:
-  camera:
-    - v4l2-device
-    - v4l2-enumeration
-  audio:
-    - alsa-card
-    - alsa-playback
-  wifi:
-    - wireless-interface
-    - iw-dev
-  bluetooth:
-    - bluetooth-controller
-  graphics:
-    - drm-card
-    - dri-device
-    - opengl-info
-  keyboard:
-    - input-subsystem
-  trackpad:
-    - input-subsystem
-  storage:
-    - block-device
-  thunderbolt:
-    - thunderbolt-sysfs
-  smc-thermal-fans:
-    - hwmon
-    - thermal-zones
-    - applesmc
-  power:
-    - cpufreq
+  camera: [v4l2-device, v4l2-enumeration]
+  audio: [alsa-card, alsa-playback]
+  wifi: [wireless-interface, iw-dev]
+  bluetooth: [bluetooth-controller]
+  graphics: [drm-card, dri-device, opengl-info]
+  keyboard: [input-subsystem]
+  trackpad: [input-subsystem]
+  storage: [block-device]
+  thunderbolt: [thunderbolt-sysfs]
+  smc-thermal-fans: [hwmon, thermal-zones, applesmc]
+  power: [cpufreq]
 policy:
   mutation: false
   suspend_resume: capability-only
