@@ -41,6 +41,7 @@ def resolve(system: dict, devices: list[HardwareDevice]) -> list[dict]:
                 distribution=platform_info.distribution,
                 architecture=platform_info.architecture,
                 kernel=platform_info.kernel,
+                version=platform_info.version,
             )
         plans.append(
             {
