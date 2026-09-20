@@ -16,4 +16,4 @@ Planned adapters:
 
 Adapters must not contain Apple hardware detection logic.
 
-The first adapter implementation will be read-only planning: it reports required packages and commands without changing the system. Actual installation will be a separate privileged operation after compatibility checks pass.
+The first adapter implementation is read-only planning in `src/maclinux/packaging.py`. It reports the package ecosystem, required development packages and example commands without changing the system. Ubuntu/Debian, ALT, RPM/DNF, Arch, openSUSE, Alpine and Gentoo are represented; package names remain conservative because exact kernel package names vary by release. Actual installation will be a separate privileged operation after compatibility checks and functional tests pass.
