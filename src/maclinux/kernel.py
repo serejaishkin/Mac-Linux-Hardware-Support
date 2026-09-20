@@ -5,7 +5,8 @@ from __future__ import annotations
 import os
 import platform
 import re
-from pathlib import Path
+import shutil
+import subprocess
 from dataclasses import dataclass, asdict
 
 
@@ -17,6 +18,7 @@ class KernelInfo:
     build_tree: str
     headers_present: bool
     config_present: bool
+    modules_symvers_present: bool
     compiler: str
     localversion: str
     vermagic: str
@@ -27,7 +29,20 @@ class KernelInfo:
 
 def _read(path: str) -> str:
     try:
-        return Path(path).read_text(encoding="utf-8", errors="replace").strip()
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            return fh.read().strip()
+    except OSError:
+        return ""
+
+
+def _module_vermagic() -> str:
+    modinfo = shutil.which("modinfo")
+    if not modinfo:
+        return ""
+    try:
+        p = subprocess.run([modinfo, "-F", "vermagic", "kernel"], text=True,
+                           capture_output=True, check=False, shell=False)
+        return p.stdout.strip() if p.returncode == 0 else ""
     except OSError:
         return ""
 
@@ -36,17 +51,21 @@ def detect_kernel(build_tree: str | None = None) -> KernelInfo:
     release = platform.release()
     tree = build_tree or f"/lib/modules/{release}/build"
     config = f"/boot/config-{release}"
-    version = _read(f"{tree}/Makefile")
-    local = _read(f"{tree}/include/config/kernel.release") or _read(f"{tree}/include/config/auto.conf.cmd")
+    makefile = _read(f"{tree}/Makefile")
+    generated_release = _read(f"{tree}/include/config/kernel.release")
+    generated_uts = _read(f"{tree}/include/generated/utsrelease.h")
+    local = generated_release or generated_uts or _read(f"{tree}/include/config/auto.conf.cmd")
     compiler = _read(f"{tree}/include/generated/compile.h")
-    vermagic = _read(f"{tree}/include/config/kernel.release")
+    symvers = os.path.isfile(f"{tree}/Module.symvers")
+    vermagic = _module_vermagic()
     return KernelInfo(
         release=release,
-        version=_extract_kernel_version(version, release),
+        version=_extract_kernel_version(makefile, generated_release or release),
         architecture=platform.machine(),
         build_tree=tree if os.path.isdir(tree) else "",
         headers_present=os.path.isdir(tree),
         config_present=os.path.exists(config) or os.path.exists(f"{tree}/.config"),
+        modules_symvers_present=symvers,
         compiler=compiler[:200],
         localversion=local[:200],
         vermagic=vermagic[:200],
