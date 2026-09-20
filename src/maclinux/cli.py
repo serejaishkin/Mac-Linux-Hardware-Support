@@ -6,8 +6,8 @@ import argparse
 import json
 import os
 import shutil
-import subprocess
 
+from .compat import compatibility
 from .detect import detect, firmware_candidates, module_loaded
 from .registry import DEVICES, DRIVER_SOURCES
 
@@ -39,7 +39,6 @@ def cmd_detect(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
-
     print(f"Model: {result['model']}")
     print(f"Architecture: {result['architecture']}")
     print(f"Kernel: {result['kernel']}")
@@ -55,18 +54,16 @@ def cmd_detect(args: argparse.Namespace) -> int:
 
 def cmd_diagnose(args: argparse.Namespace) -> int:
     result = detect()
-    print(f"Mac Linux Hardware Support 0.1.0")
+    print("Mac Linux Hardware Support 0.1.0")
     print(f"Model: {result['model']}")
     print(f"Kernel: {result['kernel']}")
     print(f"Architecture: {result['architecture']}")
     print(f"Distribution: {_distro()}")
     print()
-
     known = [d for d in result["devices"] if d.get("known")]
     if not known:
         print("No registered Apple-specific devices were detected.")
         return 0
-
     for item in known:
         meta = DEVICES[item["pci_id"]]
         print(meta["name"])
@@ -76,11 +73,31 @@ def cmd_diagnose(args: argparse.Namespace) -> int:
         if meta["firmware_required"]:
             firmware = firmware_candidates(meta["driver"])
             print(f"  Firmware:  {'found' if firmware else 'not found'}")
+        state = compatibility(result, meta)
+        print(f"  Compatibility: {state['status']}")
         print(f"  Status:    {meta['status']}")
         source = DRIVER_SOURCES.get(meta["driver"])
         if source:
             print(f"  Upstream:  {source['upstream']}")
         print()
+
+
+def cmd_plan(args: argparse.Namespace) -> int:
+    result = detect()
+    plans = []
+    for item in result["devices"]:
+        if item.get("known"):
+            meta = DEVICES[item["pci_id"]]
+            plans.append(compatibility(result, meta))
+    output = {
+        "model": result["model"],
+        "kernel": result["kernel"],
+        "architecture": result["architecture"],
+        "distribution": _distro(),
+        "package_manager": _package_manager(),
+        "actions": plans,
+    }
+    print(json.dumps(output, indent=2, ensure_ascii=False))
     return 0
 
 
@@ -88,13 +105,11 @@ def cmd_repair(args: argparse.Namespace) -> int:
     if os.geteuid() != 0:
         print("repair requires root privileges; diagnostic commands do not.")
         return 2
-
     if args.component == "camera":
-        print("Camera repair is not automated yet.")
-        print("Detected dependency: patjak/facetimehd + facetimehd-firmware.")
-        print("Next MVP step: distro adapter + kernel compatibility check + safe build/install plan.")
+        print("Camera repair is intentionally not automatic in MVP 0.1.")
+        print("Run: maclinux plan")
+        print("The plan must pass kernel, headers, firmware and Secure Boot checks before installation.")
         return 3
-
     print(f"No repair workflow implemented for: {args.component}")
     return 3
 
@@ -110,15 +125,19 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("diagnose", help="diagnose known hardware integrations")
     p.set_defaults(func=cmd_diagnose)
 
+    p = sub.add_parser("plan", help="build a safe compatibility/install plan")
+    p.set_defaults(func=cmd_plan)
+
     p = sub.add_parser("repair", help="repair a hardware component")
     p.add_argument("component", choices=["camera", "wifi", "audio"])
     p.set_defaults(func=cmd_repair)
-
     return parser
 
 
 def main() -> int:
-    return build_parser().parse_args().func(build_parser().parse_args())
+    args = build_parser().parse_args()
+    return args.func(args)
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
