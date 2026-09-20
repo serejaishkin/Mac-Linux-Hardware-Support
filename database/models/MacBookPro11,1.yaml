@@ -1,0 +1,38 @@
+model: MacBookPro11,1
+vendor: Apple
+family: MacBook Pro
+generation: Late 2013
+form_factor: notebook
+architectures:
+  - x86_64
+status: reference-platform
+
+devices:
+  camera:
+    component: facetime-hd
+    integration: facetimehd
+    bus: pci
+    status: investigation
+  wifi:
+    component: broadcom
+    status: investigation
+  bluetooth:
+    component: broadcom
+    status: investigation
+  audio:
+    component: cirrus-cs4208
+    status: investigation
+  gpu:
+    component: intel-iris-5100
+    status: upstream-validation
+  thunderbolt:
+    component: thunderbolt
+    status: upstream-validation
+  storage:
+    component: nvme
+    status: upstream-validation
+
+testing:
+  distributions:
+    - ubuntu
+    - altlinux
