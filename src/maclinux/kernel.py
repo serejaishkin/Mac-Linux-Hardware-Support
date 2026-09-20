@@ -23,11 +23,13 @@ class KernelInfo:
     localversion: str
     vermagic: str
     config: dict[str, str]
-    compiler_id: str
-    symvers: dict[str, tuple[str, str, str, str]]
+    compiler_id: str = ""
+    symvers: dict[str, tuple[str, str, str, str]] = None
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        data = asdict(self)
+        data["symvers"] = data["symvers"] or {}
+        return data
 
 
 def _read(path: str) -> str:
