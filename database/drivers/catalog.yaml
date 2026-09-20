@@ -1,0 +1,161 @@
+# Driver integration catalog.
+# "mainline" means use the Linux kernel driver and focus on detection/quirks/packaging.
+# "external" means an out-of-tree project may be required.
+# This catalog is intentionally model-agnostic; model-specific bindings live in database/models/.
+
+drivers:
+  - id: facetimehd
+    component: camera
+    source: external
+    upstream: https://github.com/patjak/facetimehd
+    firmware: https://github.com/patjak/facetimehd-firmware
+    interface: v4l2
+    status: external-integration
+
+  - id: brcmfmac
+    component: wifi
+    source: mainline
+    subsystem: wireless
+    firmware: linux-firmware
+    status: mainline-integration
+
+  - id: broadcom-wl
+    component: wifi
+    source: external
+    module: wl
+    status: legacy-compatibility
+    notes:
+      - Select only when the detected Broadcom PCI ID requires it.
+      - Never install blindly; wl and brcmfmac can conflict.
+
+  - id: bluetooth-broadcom
+    component: bluetooth
+    source: mainline-plus-firmware
+    subsystem: bluetooth
+    firmware: linux-firmware-or-model-specific
+    status: integration
+
+  - id: snd-hda-intel
+    component: audio
+    source: mainline
+    subsystem: sound-hda
+    status: mainline-integration
+
+  - id: snd-hda-codec-cirrus
+    component: audio-codec
+    source: mainline
+    subsystem: sound-hda
+    status: mainline-integration
+
+  - id: snd_hda_macbookpro
+    component: audio
+    source: external
+    upstream: https://github.com/davidjo/snd_hda_macbookpro
+    status: model-specific-integration
+    notes:
+      - Use only where mainline codec quirks are insufficient.
+
+  - id: applespi
+    component: keyboard-trackpad
+    source: mainline
+    subsystem: input
+    status: mainline-integration
+
+  - id: bcm5974
+    component: trackpad
+    source: mainline
+    subsystem: input
+    status: mainline-integration
+    notes:
+      - Relevant to USB Apple trackpads and older/non-SPI generations.
+
+  - id: applesmc
+    component: smc-thermal-fans
+    source: mainline
+    subsystem: hwmon
+    status: mainline-integration
+
+  - id: hid-apple
+    component: keyboard
+    source: mainline
+    subsystem: hid
+    status: mainline-integration
+
+  - id: apple-gmux
+    component: graphics-switching
+    source: mainline
+    subsystem: platform
+    status: mainline-integration
+
+  - id: i915
+    component: graphics
+    source: mainline
+    subsystem: drm
+    status: mainline-integration
+
+  - id: amdgpu
+    component: graphics
+    source: mainline
+    subsystem: drm
+    status: mainline-integration
+
+  - id: thunderbolt
+    component: thunderbolt
+    source: mainline
+    subsystem: thunderbolt
+    status: mainline-integration
+
+  - id: nvme
+    component: storage
+    source: mainline
+    subsystem: block
+    status: mainline-integration
+
+  - id: ahci
+    component: storage
+    source: mainline
+    subsystem: ata
+    status: mainline-integration
+
+  - id: intel-lpss
+    component: spi-i2c-uart
+    source: mainline
+    subsystem: platform
+    status: mainline-integration
+
+  - id: apple-ib-tbd
+    component: apple-bridge
+    source: external-or-model-specific
+    status: investigation
+    notes:
+      - Reserved for non-T2/T2 Apple bridge devices; must be selected from detected hardware.
+
+  - id: apple-bce
+    component: apple-bridge
+    source: external
+    status: model-specific
+    notes:
+      - Relevant primarily to T1/T2-era hardware; not assumed for Intel non-T1 Macs.
+
+  - id: backlight
+    component: display-backlight
+    source: mainline-plus-apple-quirks
+    status: integration
+
+  - id: hid-sensor-hub
+    component: sensors
+    source: mainline
+    subsystem: hid-sensor
+    status: integration
+
+  - id: intel-pstate
+    component: cpu-power
+    source: mainline
+    subsystem: cpufreq
+    status: integration
+
+  - id: thermal
+    component: thermal-management
+    source: mainline
+    subsystem: thermal
+    status: integration
