@@ -47,3 +47,22 @@ def test_artifact_unresolved_symbols_are_reported(monkeypatch, tmp_path):
     assert result.status == "invalid"
     assert result.unresolved_symbols == ("missing_symbol",)
     assert "missing_symbol" in result.errors[0]
+
+
+def test_artifact_crc_mismatch_is_reported(monkeypatch, tmp_path):
+    artifact = tmp_path / "demo.ko"
+    artifact.write_bytes(b"fixture")
+    monkeypatch.setattr("maclinux.artifacts._elf_machine", lambda _: "Advanced Micro Devices X86-64")
+    monkeypatch.setattr("maclinux.artifacts._modinfo", lambda _p, field: {
+        "name": "demo", "vermagic": "6.8.0 SMP", "depends": ""
+    }.get(field))
+    monkeypatch.setattr("maclinux.artifacts._undefined_symbols", lambda _: ())
+    monkeypatch.setattr("maclinux.artifacts._module_symbol_versions",
+                        lambda _: {"foo_symbol": "0x1111"})
+    result = validate_artifact(
+        str(artifact), expected_module="demo", expected_architecture="x86_64",
+        expected_vermagic="6.8.0", exported_symbols={"foo_symbol"},
+        exported_symbol_crcs={"foo_symbol": "0x2222"}
+    )
+    assert result.status == "invalid"
+    assert "CRC mismatch" in result.errors[-1]
