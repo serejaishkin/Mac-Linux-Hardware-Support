@@ -1,0 +1,7 @@
+from maclinux.cli import build_parser
+
+
+def test_parser_has_plan_command():
+    parser = build_parser()
+    args = parser.parse_args(["plan"])
+    assert args.command == "plan"
