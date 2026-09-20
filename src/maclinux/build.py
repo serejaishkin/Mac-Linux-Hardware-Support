@@ -37,7 +37,7 @@ def plan_build(driver: str, info: PlatformInfo, *, source_dir: str | None = None
     blockers: list[str] = []
     notes: list[str] = []
     status = recipe_status(recipe, distribution=info.distribution,
-                           architecture=info.architecture, kernel=info.kernel)
+                           architecture=info.architecture, kernel=info.kernel, version=info.version)
     if recipe is None:
         blockers.append("no build recipe")
     if not info.kernel_tree:
