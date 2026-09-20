@@ -14,6 +14,9 @@ from .packaging import package_plan, repair_transaction
 from .resolver import resolve
 from .validation import correlate_resolution, validate
 
+from .build import execute_build, plan_build
+from .platform import detect_platform
+
 
 def _distro() -> str:
     values = {}
