@@ -17,3 +17,14 @@ devices:
       - MacBookAir6,2
       - MacBookAir7,1
       - MacBookAir7,2
+
+  - id: 14e4:43a0
+    vendor: Broadcom
+    name: BCM4360
+    class: network
+    driver_candidates:
+      - broadcom-wl
+      - brcmfmac
+    selection: detect-and-validate
+    notes:
+      - Do not select wl solely from the model name; use the exact PCI ID and kernel support.
