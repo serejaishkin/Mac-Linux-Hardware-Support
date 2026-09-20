@@ -1,43 +1,51 @@
-# MVP 0.2 — Hardware inventory and driver resolution
+# MVP 0.3 — Non-invasive hardware validation
 
-## Implemented in 0.2
+## Implemented in 0.3
 
-- Unified normalized hardware records for the resolver.
-- PCI discovery through `lspci -nnk`, including bound kernel driver/module data when available.
-- USB discovery through `lsusb`.
-- Loaded-kernel-module inventory through `/proc/modules`.
-- Sysfs bus inventory through `/sys/bus`.
-- Exact PCI IDs take precedence over model-level guesses.
-- Model-aware component catalog for the reference MacBookPro11,1.
-- Driver candidate resolution across camera, Wi-Fi, Bluetooth, audio, keyboard, trackpad, SMC/thermal, graphics, storage, Thunderbolt and power.
-- `maclinux inventory` for machine-readable normalized hardware inventory.
-- `maclinux resolve` for machine-readable driver candidates.
-- Existing `maclinux diagnose` and `maclinux plan` now use the resolver.
-- Repair remains disabled until distribution adapters and functional validation are implemented.
+- Added a distribution-neutral functional validation framework in `src/maclinux/validation.py`.
+- Added normalized test results with `pass`, `fail`, `skip` and `unknown` states.
+- Added component checks for camera/V4L2, audio/ALSA, Wi-Fi, Bluetooth, DRM/DRI graphics, keyboard/trackpad input, storage, Thunderbolt, SMC/thermal and CPU power.
+- Optional command checks are used only when the relevant utility is installed.
+- Validation reads sysfs/proc/device state and does not install packages, load modules, alter configuration or trigger suspend.
+- Added `database/tests/catalog.yaml` as the declarative test catalog.
+- Added `maclinux test [component]` and `maclinux test --json`.
+- Added fixture-independent unit tests that remain runnable on ordinary CI hosts.
 
-## Design rules
+## Validation policy
 
-1. Mainline drivers are preferred where the kernel already provides the subsystem.
-2. Exact hardware IDs outrank model-name assumptions.
-3. External drivers are treated as integrations, not copied into this repository.
-4. Firmware is checked separately from driver selection.
-5. Secure Boot is a compatibility constraint for external modules.
-6. Detection and resolution remain distribution-neutral.
-7. Installation must not happen merely because a candidate driver exists.
+1. A visible device node or subsystem is evidence of exposure, not proof of complete functionality.
+2. Missing optional tools produce `skip`, not a false failure.
+3. Firmware is not declared loaded merely because a firmware file exists.
+4. Suspend/resume is currently capability-only; the framework never suspends the test machine automatically.
+5. Functional validation is read-only and requires no root privileges.
+6. Exact hardware/driver resolution remains separate from functional validation.
 
-## Next stage: distribution-neutral installation planning
+## Component coverage
 
-1. Define a common package/module adapter interface.
-2. Implement read-only Ubuntu/Debian APT/DEB planning.
-3. Implement read-only ALT apt-rpm/RPM planning.
-4. Add Fedora/RPM, Arch/pacman and openSUSE/zypper adapters.
-5. Add Alpine/apk and Gentoo/ebuild adapters.
-6. Add kernel-version rules and driver provenance metadata.
-7. Add firmware acquisition/validation plans without bundling proprietary Apple blobs.
-8. Add functional test definitions for each hardware component.
-9. Add fixture-based detection tests for real Mac inventories.
-10. Only then enable privileged repair workflows.
+| Component | Current checks |
+|---|---|
+| Camera | V4L2 device nodes, `v4l2-ctl --list-devices` |
+| Audio | ALSA cards, `aplay -l` |
+| Wi-Fi | wireless sysfs interface, `iw dev` |
+| Bluetooth | Bluetooth controller sysfs |
+| Graphics | DRM cards, DRI nodes, optional `glxinfo -B` |
+| Keyboard | Linux input subsystem |
+| Trackpad | Linux input subsystem |
+| Storage | block devices |
+| Thunderbolt | Thunderbolt sysfs |
+| SMC/thermal | hwmon, thermal zones, Apple SMC platform device |
+| Power | CPU cpufreq policy |
+
+## Next stage: real hardware validation and installation adapters
+
+1. Add model-specific fixtures for Apple hardware inventories.
+2. Correlate resolved driver/module binding with each functional test.
+3. Add conservative firmware-state evidence from kernel/sysfs sources.
+4. Add distribution-specific package/module adapters for Ubuntu/Debian, ALT, Fedora/RPM, Arch, openSUSE, Alpine and Gentoo.
+5. Add explicit kernel compatibility rules per driver and architecture.
+6. Add safe repair transactions with dry-run, backup and rollback.
+7. Add real Mac hardware CI/manual test reports where physical hardware is available.
 
 ## Important limitation
 
-The project does not copy upstream Linux drivers into this repository. The compatibility engine records which driver should be considered and why; actual installation remains a separate, auditable stage.
+The project still does not copy upstream Linux drivers into the repository and does not automatically modify the host. The test framework establishes hardware exposure and functional evidence; it does not replace subsystem-specific tests or a human acceptance test on physical Macs.
