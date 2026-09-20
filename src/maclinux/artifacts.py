@@ -25,6 +25,7 @@ class ArtifactResult:
     depends: tuple[str, ...]
     errors: tuple[str, ...]
     warnings: tuple[str, ...]
+    unresolved_symbols: tuple[str, ...] = ()
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -61,6 +62,21 @@ def _elf_machine(path: Path) -> str | None:
     return match.group(1).strip() if match else None
 
 
+def _undefined_symbols(path: Path) -> tuple[str, ...]:
+    readelf = shutil.which("readelf")
+    if not readelf:
+        return ()
+    rc, out, _ = _run([readelf, "-Ws", str(path)])
+    if rc:
+        return ()
+    values = []
+    for line in out.splitlines():
+        fields = line.split()
+        if len(fields) >= 8 and fields[6] == "UND":
+            values.append(fields[7])
+    return tuple(sorted(set(values)))
+
+
 def _modinfo(path: Path, field: str) -> str | None:
     modinfo = shutil.which("modinfo")
     if not modinfo:
@@ -75,6 +91,7 @@ def validate_artifact(
     expected_module: str | None = None,
     expected_architecture: str | None = None,
     expected_vermagic: str | None = None,
+    exported_symbols: set[str] | None = None,
 ) -> ArtifactResult:
     artifact = Path(path)
     errors: list[str] = []
@@ -100,8 +117,14 @@ def validate_artifact(
         errors.append("kernel vermagic mismatch")
     elif expected_vermagic and not vermagic:
         warnings.append("module vermagic was not available for verification")
+    unresolved = _undefined_symbols(artifact)
+    unresolved_symbols = tuple(x for x in unresolved if exported_symbols is not None and x not in exported_symbols)
+    if exported_symbols is not None and unresolved_symbols:
+        errors.append("unresolved kernel symbols: " + ", ".join(unresolved_symbols[:20]))
+    elif exported_symbols is None and unresolved:
+        warnings.append("kernel exported-symbol table was not supplied; undefined symbols were not resolved")
     depends_raw = _modinfo(artifact, "depends") or ""
     depends = tuple(x for x in depends_raw.split(",") if x)
     status = "invalid" if errors else ("valid-with-warnings" if warnings else "valid")
     return ArtifactResult(str(artifact), status, reported_name or module, machine,
-                          vermagic, depends, tuple(errors), tuple(warnings))
+                          vermagic, depends, tuple(errors), tuple(warnings), unresolved_symbols)
