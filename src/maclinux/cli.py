@@ -10,6 +10,7 @@ import shutil
 from .compat import compatibility
 from .detect import detect, firmware_candidates, hardware_devices, module_loaded
 from .registry import DEVICES, DRIVER_SOURCES
+from .packaging import package_plan
 from .resolver import resolve
 
 
@@ -141,7 +142,9 @@ def cmd_plan(args: argparse.Namespace) -> int:
     for item in result["devices"]:
         if item.get("known"):
             meta = DEVICES[item["pci_id"]]
-            output["actions"].append(compatibility(result, meta))
+            action = compatibility(result, meta)
+            action["package_plan"] = package_plan(result["distribution"], meta["driver"], meta.get("source", "external")).to_dict()
+            output["actions"].append(action)
     print(json.dumps(output, indent=2, ensure_ascii=False))
     return 0
 
