@@ -44,7 +44,7 @@ RECIPES = {
         "facetimehd", "facetimehd", ("camera",), ("x86_64",), RECIPE_DISTROS,
         DEFAULT_VERSIONS, "4.0", None, "kbuild/dkms",
         ("compiler", "make", "kernel-devel"), ("facetimehd",),
-        ("facetimehd-firmware",), hardware_ids=("14e4:1570",),
+        ("facetimehd-firmware",), kernel_config=("CONFIG_MEDIA_SUPPORT", "CONFIG_VIDEO_V4L2"), hardware_ids=("14e4:1570",),
     ),
     "snd_hda_macbookpro": Recipe(
         "snd_hda_macbookpro", "snd_hda_macbookpro", ("audio",), ("x86_64",), RECIPE_DISTROS,
