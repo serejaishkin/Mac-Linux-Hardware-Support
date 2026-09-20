@@ -30,3 +30,20 @@ def test_artifact_missing_is_invalid():
     result = validate_artifact("/definitely/missing/module.ko", expected_module="module")
     assert result.status == "invalid"
     assert "artifact does not exist" in result.errors
+
+
+def test_artifact_unresolved_symbols_are_reported(monkeypatch, tmp_path):
+    artifact = tmp_path / "demo.ko"
+    artifact.write_bytes(b"not-an-elf")
+    monkeypatch.setattr("maclinux.artifacts._elf_machine", lambda _: "Advanced Micro Devices X86-64")
+    monkeypatch.setattr("maclinux.artifacts._modinfo", lambda _p, field: {
+        "name": "demo", "vermagic": "6.8.0 SMP", "depends": ""
+    }.get(field))
+    monkeypatch.setattr("maclinux.artifacts._undefined_symbols", lambda _: ("missing_symbol", "ok_symbol"))
+    result = validate_artifact(
+        str(artifact), expected_module="demo", expected_architecture="x86_64",
+        expected_vermagic="6.8.0", exported_symbols={"ok_symbol"}
+    )
+    assert result.status == "invalid"
+    assert result.unresolved_symbols == ("missing_symbol",)
+    assert "missing_symbol" in result.errors[0]
