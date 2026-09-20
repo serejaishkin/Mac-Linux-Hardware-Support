@@ -11,6 +11,7 @@ from .kernel import detect_kernel, required_config_missing
 from .platform import PlatformInfo
 from .recipes import get_recipe, recipe_status
 from .sources import get_source
+from .workspace import create_workspace, source_sha256
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,8 @@ def plan_build(driver: str, info: PlatformInfo, *, source_dir: str | None = None
         blockers.append("proprietary source cannot be fetched automatically")
     if source_dir and not os.path.isdir(source_dir):
         blockers.append("source directory does not exist")
+    if source_dir and os.path.isdir(source_dir):
+        notes.append("source SHA-256: " + source_sha256(source_dir))
     if recipe and recipe.firmware:
         notes.append("firmware is a separate input; build success does not prove firmware availability or compatibility")
     root = source_dir or f"drivers/src/{driver}"
@@ -85,8 +88,11 @@ def execute_build(plan: BuildPlan, *, execute: bool = False) -> dict:
                 "reason": "explicit --execute is required"}
     if plan.status != "buildable" or plan.blockers:
         return {"status": "blocked", "executed": False, "blockers": list(plan.blockers)}
+    source_root = next((part[2:] for part in plan.commands[0] if part.startswith("M=")), "")
+    workspace = create_workspace(plan.driver, source_root)
+    commands = tuple(tuple(workspace.source_path if part == "M=" + source_root else part for part in command) for command in plan.commands)
     results = []
-    for command in plan.commands:
+    for command in commands:
         if command[0] not in {"make", "ninja", "meson"}:
             return {"status": "blocked", "executed": False, "reason": "command not permitted"}
         proc = subprocess.run(command, text=True, capture_output=True, check=False, shell=False)
@@ -96,7 +102,7 @@ def execute_build(plan: BuildPlan, *, execute: bool = False) -> dict:
             return {"status": "build-failed", "executed": True, "results": results}
     artifacts = []
     for module in plan.output_modules:
-        for command in plan.commands:
+        for command in commands:
             source_root = next((part[2:] for part in command if part.startswith("M=")), "")
             candidate = os.path.join(source_root, module + ".ko")
             result = validate_artifact(candidate, expected_module=module,
@@ -107,4 +113,4 @@ def execute_build(plan: BuildPlan, *, execute: bool = False) -> dict:
             artifacts.append(result.to_dict())
     if any(a["status"] == "invalid" for a in artifacts):
         return {"status": "artifact-invalid", "executed": True, "results": results, "artifacts": artifacts}
-    return {"status": "built", "executed": True, "results": results, "artifacts": artifacts}
+    return {"status": "built", "executed": True, "workspace": workspace.to_dict(), "results": results, "artifacts": artifacts}
