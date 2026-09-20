@@ -1,4 +1,4 @@
-from maclinux.kernel import KernelInfo, kernel_in_range, kernel_major_minor, required_config_missing
+from maclinux.kernel import KernelInfo, _compiler_id, _symvers, kernel_in_range, kernel_major_minor, required_config_missing
 
 
 def test_kernel_range():
@@ -15,3 +15,20 @@ def test_required_config_missing():
     })
     assert required_config_missing(info, ("CONFIG_SND", "CONFIG_INPUT")) == ()
     assert required_config_missing(info, ("CONFIG_MEDIA_SUPPORT",)) == ("CONFIG_MEDIA_SUPPORT",)
+
+
+def test_compiler_id_and_symvers(tmp_path):
+    tree = tmp_path / "build"
+    (tree / "include/generated").mkdir(parents=True)
+    (tree / "include/generated/compile.h").write_text(
+        '#define LINUX_COMPILER "gcc (GCC) 14.2.1 20240910 (Red Hat 14.2.1-3)"\n',
+        encoding="utf-8",
+    )
+    (tree / "Module.symvers").write_text(
+        "0x1234\tfoo_symbol\tvmlinux\tEXPORT_SYMBOL\n"
+        "0x5678\tbar_symbol\tother\tEXPORT_SYMBOL_GPL\tNS\n",
+        encoding="utf-8",
+    )
+    assert "gcc (GCC) 14.2.1" in _compiler_id(str(tree))
+    assert _symvers(str(tree))["foo_symbol"][0] == "0x1234"
+    assert _symvers(str(tree))["bar_symbol"][3] == "NS"
