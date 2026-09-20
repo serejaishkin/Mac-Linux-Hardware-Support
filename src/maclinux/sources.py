@@ -23,15 +23,15 @@ class SourceSpec:
 SOURCES = {
     "facetimehd": SourceSpec(
         "facetimehd", "git", "https://github.com/patjak/facetimehd",
-        "pinned-by-downstream-recipe", "GPL-2.0", firmware="facetimehd-firmware",
+        "un-pinned", "GPL-2.0", firmware="facetimehd-firmware",
     ),
     "applespi": SourceSpec(
         "applespi", "git", "https://github.com/linux-surface/applespi",
-        "pinned-by-downstream-recipe", "GPL-2.0",
+        "un-pinned", "GPL-2.0",
     ),
     "snd_hda_macbookpro": SourceSpec(
         "snd_hda_macbookpro", "git", "https://github.com/davidjo/snd_hda_macbookpro",
-        "pinned-by-downstream-recipe", "GPL-2.0",
+        "un-pinned", "GPL-2.0",
     ),
 }
 
