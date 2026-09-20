@@ -1,0 +1,50 @@
+# Platform catalog. Version support is explicit; distro family != kernel version.
+platforms:
+  - id: debian
+    ecosystem: deb
+    manager: apt-get
+    versions: ["11", "12", "13"]
+  - id: ubuntu
+    ecosystem: deb
+    manager: apt-get
+    versions: ["20.04", "22.04", "24.04", "26.04"]
+  - id: linuxmint
+    ecosystem: deb
+    manager: apt-get
+    versions: ["20", "21", "22"]
+  - id: fedora
+    ecosystem: rpm
+    manager: dnf
+    versions: ["40", "41", "42", "43"]
+  - id: rhel
+    ecosystem: rpm
+    manager: dnf
+    versions: ["8", "9", "10"]
+  - id: altlinux
+    ecosystem: rpm
+    manager: apt-get
+    versions: ["p10", "p11"]
+  - id: arch
+    ecosystem: arch
+    manager: pacman
+    versions: ["rolling"]
+  - id: manjaro
+    ecosystem: arch
+    manager: pacman
+    versions: ["rolling"]
+  - id: opensuse
+    ecosystem: rpm
+    manager: zypper
+    versions: ["Leap 15.6", "Leap 16", "Tumbleweed"]
+  - id: alpine
+    ecosystem: apk
+    manager: apk
+    versions: ["3.19", "3.20", "3.21", "3.22", "3.23"]
+  - id: gentoo
+    ecosystem: ebuild
+    manager: emerge
+    versions: ["rolling"]
+  - id: generic
+    ecosystem: generic
+    manager: native
+    versions: ["unknown"]
