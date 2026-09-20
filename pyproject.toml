@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mac-linux-hardware-support"
+version = "0.1.0"
+description = "Hardware detection and compatibility tooling for Apple hardware on Linux"
+requires-python = ">=3.9"
+license = { text = "License pending" }
+dependencies = []
+
+[project.scripts]
+maclinux = "maclinux.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
