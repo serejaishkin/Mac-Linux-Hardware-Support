@@ -1,37 +1,40 @@
-# MVP 0.1 — Detection and FaceTime HD diagnostics
+# MVP 0.1 — Detection, diagnostics and compatibility planning
 
 ## Implemented
 
-- Python package with dependency-free Linux detection.
+- Dependency-free Python core.
 - DMI Mac model detection.
-- PCI device discovery through `lspci -nn`.
+- PCI discovery through `lspci -nn`.
 - Registry entry for Broadcom FaceTime HD PCI ID `14e4:1570`.
 - Detection of loaded `facetimehd` module.
-- Detection of installed FaceTime HD firmware directories.
+- Detection of FaceTime HD firmware directories.
 - Distribution/package-manager detection.
 - `maclinux detect --json`.
 - `maclinux diagnose`.
+- `maclinux plan`.
+- Kernel build-tree check.
+- Architecture check.
+- DKMS availability check.
+- UEFI Secure Boot state check when exposed through EFI variables.
 
 ## External components identified
 
-The upstream FaceTime HD driver is the `patjak/facetimehd` project. Its current DKMS metadata declares module `facetimehd`, version `0.7.0.1`, and blacklists `bdc_pci`. Its Makefile builds against the running kernel's module build directory.
+The upstream FaceTime HD driver is `patjak/facetimehd`. Its current repository metadata declares module `facetimehd`, version `0.7.0.1`, and blacklists `bdc_pci`. Its Makefile builds against the kernel module build directory.
 
-The companion `patjak/facetimehd-firmware` repository provides firmware extraction/download tooling and a Debian packaging template.
+The companion `patjak/facetimehd-firmware` repository provides firmware extraction/download tooling and Debian packaging metadata.
 
 ## Important limitation
 
-The project does **not** copy the upstream driver into this repository at this stage. It records the integration and performs detection/diagnostics. This keeps licensing, provenance and upstream update handling explicit.
+The project does **not** copy the upstream driver into this repository. It records the integration and performs detection/diagnostics/planning. This keeps licensing, provenance and upstream update handling explicit.
 
-## Next step
+## Next implementation stage
 
-Implement a distribution-neutral installation plan:
-
-1. detect kernel headers/build tree;
-2. detect Secure Boot/module-signing state;
-3. select a supported facetimehd source revision;
-4. prepare firmware;
-5. build a DKMS or kernel module;
-6. install it through a distro adapter;
-7. load the module;
-8. validate V4L2 and camera device nodes;
-9. record the result.
+1. Add a distribution adapter interface.
+2. Implement Ubuntu/Debian adapter.
+3. Implement ALT Linux adapter.
+4. Implement RPM and Arch adapters.
+5. Add kernel compatibility rules for facetimehd.
+6. Add safe firmware acquisition workflow without bundling proprietary firmware.
+7. Add DKMS/native module installation.
+8. Add V4L2 functional validation.
+9. Add hardware-test result format.
