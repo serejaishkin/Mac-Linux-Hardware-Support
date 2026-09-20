@@ -77,6 +77,20 @@ def _undefined_symbols(path: Path) -> tuple[str, ...]:
     return tuple(sorted(set(values)))
 
 
+def _module_symbol_versions(path: Path) -> dict[str, str]:
+    modprobe = shutil.which("modprobe")
+    if not modprobe:
+        return {}
+    rc, out, _ = _run([modprobe, "--show-modversions", str(path)])
+    if rc:
+        return {}
+    values = {}
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) >= 2:
+            values[parts[-1]] = parts[0]
+    return values
+
 def _modinfo(path: Path, field: str) -> str | None:
     modinfo = shutil.which("modinfo")
     if not modinfo:
@@ -92,6 +106,7 @@ def validate_artifact(
     expected_architecture: str | None = None,
     expected_vermagic: str | None = None,
     exported_symbols: set[str] | None = None,
+    exported_symbol_crcs: dict[str, str] | None = None,
 ) -> ArtifactResult:
     artifact = Path(path)
     errors: list[str] = []
@@ -123,6 +138,17 @@ def validate_artifact(
         errors.append("unresolved kernel symbols: " + ", ".join(unresolved_symbols[:20]))
     elif exported_symbols is None and unresolved:
         warnings.append("kernel exported-symbol table was not supplied; undefined symbols were not resolved")
+    if exported_symbol_crcs is not None:
+        required_versions = _module_symbol_versions(artifact)
+        crc_mismatches = tuple(
+            f"{symbol}: module={crc} kernel={exported_symbol_crcs[symbol]}"
+            for symbol, crc in required_versions.items()
+            if symbol in exported_symbol_crcs and crc.lower() != exported_symbol_crcs[symbol].lower()
+        )
+        if crc_mismatches:
+            errors.append("kernel symbol CRC mismatch: " + ", ".join(crc_mismatches[:20]))
+        elif not required_versions:
+            warnings.append("module symbol CRCs were not available; CRC validation was skipped")
     depends_raw = _modinfo(artifact, "depends") or ""
     depends = tuple(x for x in depends_raw.split(",") if x)
     status = "invalid" if errors else ("valid-with-warnings" if warnings else "valid")
