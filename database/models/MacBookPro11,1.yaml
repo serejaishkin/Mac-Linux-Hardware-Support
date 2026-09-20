@@ -11,6 +11,7 @@ hardware:
   cpu:
     family: Intel Haswell
   gpu:
+    pci_id: 8086:0a2e
     integrated: Intel Iris 5100
     driver: i915
   camera:
@@ -19,8 +20,8 @@ hardware:
     driver: facetimehd
   wifi:
     driver_selection: detect-by-pci
+    pci_id: 14e4:43a0
     candidates:
-      - brcmfmac
       - broadcom-wl
   bluetooth:
     driver_selection: detect-by-usb
@@ -28,18 +29,18 @@ hardware:
       - btusb
       - broadcom-firmware
   audio:
+    pci_controller: 8086:0a0c
     codec: cirrus-cs4208
+    model_fixup: mbp11
     drivers:
       - snd-hda-intel
       - snd-hda-codec-cirrus
   keyboard:
     candidates:
       - hid-apple
-      - applespi
   trackpad:
     candidates:
       - bcm5974
-      - applespi
   smc:
     driver: applesmc
   storage:
