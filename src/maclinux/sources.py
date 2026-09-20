@@ -26,12 +26,12 @@ SOURCES = {
         "c5c7fac4e6da061ededd4c46545930ff7cdc0529", "GPL-2.0", firmware="facetimehd-firmware",
     ),
     "applespi": SourceSpec(
-        "applespi", "git", "https://github.com/linux-surface/applespi",
-        "un-pinned", "GPL-2.0",
+        "applespi", "git", "https://github.com/torvalds/linux",
+        "mainline", "GPL-2.0",
     ),
     "snd_hda_macbookpro": SourceSpec(
         "snd_hda_macbookpro", "git", "https://github.com/davidjo/snd_hda_macbookpro",
-        "un-pinned", "GPL-2.0",
+        "89b22ff90b86468b186706861dd18663562defa7", "GPL-2.0",
     ),
 }
 
