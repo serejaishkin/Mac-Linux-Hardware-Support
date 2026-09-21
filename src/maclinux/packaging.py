@@ -13,6 +13,9 @@ class PackageArtifact:
     architecture: str
     kernel_release: str
     source_sha256: str
+    vermagic: str = ""
+    kernel_symvers_sha256: str = ""
+    compiler_id: str = ""
     modules: tuple[str, ...]
     dependencies: tuple[str, ...] = ()
     firmware: tuple[str, ...] = ()
@@ -22,12 +25,12 @@ class PackageArtifact:
     def artifact_id(self) -> str:
         data = json.dumps({"driver":self.driver,"package":self.package_name,"version":self.package_version,
             "ecosystem":self.ecosystem,"arch":self.architecture,"kernel":self.kernel_release,
-            "source":self.source_sha256,"modules":self.modules}, sort_keys=True).encode()
+            "source":self.source_sha256,"vermagic":self.vermagic,"symvers":self.kernel_symvers_sha256,"compiler":self.compiler_id,"modules":self.modules}, sort_keys=True).encode()
         return hashlib.sha256(data).hexdigest()[:16]
     def to_dict(self) -> dict:
         return {"driver":self.driver,"package_name":self.package_name,"package_version":self.package_version,
             "ecosystem":self.ecosystem,"architecture":self.architecture,"kernel_release":self.kernel_release,
-            "source_sha256":self.source_sha256,"modules":list(self.modules),"dependencies":list(self.dependencies),
+            "source_sha256":self.source_sha256,"vermagic":self.vermagic,"kernel_symvers_sha256":self.kernel_symvers_sha256,"compiler_id":self.compiler_id,"modules":list(self.modules),"dependencies":list(self.dependencies),
             "firmware":list(self.firmware),"files":[list(x) for x in self.files],"metadata":dict(self.metadata),
             "artifact_id":self.artifact_id}
 
@@ -58,6 +61,11 @@ class PackageBackend(Protocol):
     ecosystem: str
     package_format: str
     def render(self, artifact: PackageArtifact) -> BackendOutput: ...
+
+def _package_arch(ecosystem: str, architecture: str) -> str:
+    if ecosystem == "deb":
+        return {"x86_64": "amd64", "aarch64": "arm64", "armv7l": "armhf", "ppc64le": "ppc64el"}.get(architecture, architecture)
+    return architecture
 
 def _header(a):
     return (f"# maclinux package: {a.package_name}\n# driver: {a.driver}\n"
