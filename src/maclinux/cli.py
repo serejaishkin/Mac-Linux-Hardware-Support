@@ -11,6 +11,7 @@ from .compat import compatibility
 from .detect import detect, firmware_candidates, hardware_devices, module_loaded
 from .registry import DEVICES, DRIVER_SOURCES
 from .packaging import PackageArtifact, package_plan, render_package, repair_transaction
+from .package_builder import execute_package_build
 from .resolver import resolve
 from .validation import correlate_resolution, validate
 
@@ -89,6 +90,20 @@ def cmd_package(args: argparse.Namespace) -> int:
         metadata={"distribution": info.distribution, "distribution_version": info.version},
     )
     output = render_package(artifact)
+    if args.build:
+        if not args.module_path:
+            print(json.dumps({"status": "blocked", "reason": "--module-path is required with --build"},
+                             indent=2))
+            return 1
+        result = execute_package_build(
+            artifact,
+            tuple(args.module_path),
+            output_dir=args.output_dir,
+            execute=args.execute,
+        )
+        print(json.dumps({"artifact": artifact.to_dict(), "backend": output.to_dict(),
+                          "build": result}, indent=2, ensure_ascii=False))
+        return 0 if result["status"] in {"dry-run", "built", "recipe-ready"} else 1
     print(json.dumps({"status": "planned", "artifact": artifact.to_dict(), "backend": output.to_dict()},
                      indent=2, ensure_ascii=False))
     return 0
@@ -262,6 +277,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--package-name")
     p.add_argument("--source-dir")
     p.add_argument("--source-sha256")
+    p.add_argument("--build", action="store_true", help="prepare/build a package from validated .ko files")
+    p.add_argument("--execute", action="store_true", help="actually run the native package builder")
+    p.add_argument("--module-path", action="append", help="path to a validated .ko; repeat per module")
+    p.add_argument("--output-dir")
     p.set_defaults(func=cmd_package)
 
     p = sub.add_parser("detect", help="detect Mac model and hardware")
