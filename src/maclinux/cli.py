@@ -10,7 +10,7 @@ import shutil
 from .compat import compatibility
 from .detect import detect, firmware_candidates, hardware_devices, module_loaded
 from .registry import DEVICES, DRIVER_SOURCES
-from .packaging import package_plan, repair_transaction
+from .packaging import PackageArtifact, package_plan, render_package, repair_transaction
 from .resolver import resolve
 from .validation import correlate_resolution, validate
 
@@ -59,6 +59,38 @@ def cmd_build(args: argparse.Namespace) -> int:
     output = {"plan": plan.to_dict(), "execution": result}
     print(json.dumps(output, indent=2, ensure_ascii=False))
     return 0 if result["status"] in {"dry-run", "built"} else 1
+
+
+def cmd_package(args: argparse.Namespace) -> int:
+    info = detect_platform()
+    recipe = __import__("maclinux.recipes", fromlist=["get_recipe"]).get_recipe(args.driver)
+    if recipe is None:
+        print(json.dumps({"status": "unknown", "reason": "no recipe for driver"}, indent=2))
+        return 2
+    source_hash = args.source_sha256
+    if args.source_dir and not source_hash:
+        from .workspace import source_sha256
+        source_hash = source_sha256(args.source_dir)
+    if not source_hash:
+        print(json.dumps({"status": "blocked", "reason": "source SHA-256 is required; use --source-dir or --source-sha256"}, indent=2))
+        return 1
+    artifact = PackageArtifact(
+        driver=args.driver,
+        package_name=args.package_name or "maclinux-" + args.driver,
+        package_version=args.version,
+        ecosystem=info.ecosystem,
+        architecture=info.architecture,
+        kernel_release=info.kernel,
+        source_sha256=source_hash,
+        modules=recipe.modules,
+        dependencies=tuple(recipe.packages),
+        firmware=recipe.firmware,
+        metadata={"distribution": info.distribution, "distribution_version": info.version},
+    )
+    output = render_package(artifact)
+    print(json.dumps({"status": "planned", "artifact": artifact.to_dict(), "backend": output.to_dict()},
+                     indent=2, ensure_ascii=False))
+    return 0
 
 
 def cmd_detect(args: argparse.Namespace) -> int:
@@ -222,6 +254,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--source-dir")
     p.add_argument("--execute", action="store_true", help="actually run the build command")
     p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser("package", help="generate a deterministic package recipe")
+    p.add_argument("driver")
+    p.add_argument("--version", default="0.1.0")
+    p.add_argument("--package-name")
+    p.add_argument("--source-dir")
+    p.add_argument("--source-sha256")
+    p.set_defaults(func=cmd_package)
 
     p = sub.add_parser("detect", help="detect Mac model and hardware")
     p.add_argument("--json", action="store_true")
