@@ -83,7 +83,8 @@ def cmd_package(args: argparse.Namespace) -> int:
         kernel_release=info.kernel,
         source_sha256=source_hash,
         modules=recipe.modules,
-        dependencies=tuple(recipe.packages),
+        # recipe.packages are build prerequisites, not runtime package dependencies.
+        dependencies=(),
         firmware=recipe.firmware,
         metadata={"distribution": info.distribution, "distribution_version": info.version},
     )
