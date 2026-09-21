@@ -12,6 +12,7 @@ from .detect import detect, firmware_candidates, hardware_devices, module_loaded
 from .registry import DEVICES, DRIVER_SOURCES
 from .packaging import PackageArtifact, package_plan, render_package, repair_transaction
 from .package_builder import execute_package_build
+from .kernel import detect_kernel
 from .resolver import resolve
 from .validation import correlate_resolution, validate
 
@@ -75,6 +76,7 @@ def cmd_package(args: argparse.Namespace) -> int:
     if not source_hash:
         print(json.dumps({"status": "blocked", "reason": "source SHA-256 is required; use --source-dir or --source-sha256"}, indent=2))
         return 1
+    kernel_info = detect_kernel(info.kernel_tree or None)
     artifact = PackageArtifact(
         driver=args.driver,
         package_name=args.package_name or "maclinux-" + args.driver,
@@ -83,6 +85,8 @@ def cmd_package(args: argparse.Namespace) -> int:
         architecture=info.architecture,
         kernel_release=info.kernel,
         source_sha256=source_hash,
+        vermagic=kernel_info.vermagic,
+        compiler_id=kernel_info.compiler_id,
         modules=recipe.modules,
         # recipe.packages are build prerequisites, not runtime package dependencies.
         dependencies=(),
