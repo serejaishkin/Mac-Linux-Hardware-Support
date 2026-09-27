@@ -198,6 +198,35 @@ def cmd_diagnose(args: argparse.Namespace) -> int:
         print()
 
 
+def cmd_install_plan(args: argparse.Namespace) -> int:
+    result = _system(detect())
+    adapter = get_adapter(result)
+    plans = resolve(result, hardware_devices(result))
+    external = []
+    for item in result["devices"]:
+        if item.get("known"):
+            meta = DEVICES[item["pci_id"]]
+            if meta.get("source") == "external":
+                external.append(meta["id"])
+
+    package_plan = adapter.plan_packages(["dkms"] if external else [])
+    header_plan = adapter.plan_kernel_headers(result["kernel"]) if external else None
+
+    output = {
+        "model": result["model"],
+        "distribution": result["distribution"],
+        "adapter": adapter.id,
+        "read_only": True,
+        "external_integrations": external,
+        "packages": package_plan.to_dict(),
+        "kernel_headers": header_plan.to_dict() if header_plan else None,
+        "components": plans,
+        "warning": "No command is executed by this operation.",
+    }
+    print(json.dumps(output, indent=2, ensure_ascii=False))
+    return 0
+
+
 def cmd_plan(args: argparse.Namespace) -> int:
     result = _system(detect())
     plans = resolve(result, hardware_devices(result))
@@ -302,6 +331,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("plan", help="build a safe compatibility/install plan")
     p.set_defaults(func=cmd_plan)
+
+    p = sub.add_parser("install-plan", help="build a read-only distribution package plan")
+    p.set_defaults(func=cmd_install_plan)
 
     p = sub.add_parser("test", help="run non-invasive functional hardware checks")
     p.add_argument("component", nargs="?")
