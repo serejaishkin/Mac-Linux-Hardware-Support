@@ -25,3 +25,9 @@ def test_parser_has_package_command():
     assert args.command == "package"
     assert args.driver == "facetimehd"
     assert args.source_sha256 == "abc"
+
+
+def test_parser_has_install_plan_command():
+    parser = build_parser()
+    args = parser.parse_args(["install-plan"])
+    assert args.command == "install-plan"
