@@ -28,9 +28,14 @@ def resolve(system: dict, devices: list[HardwareDevice]) -> list[dict]:
         evidence = by_component.get(component, [])
         selected: list[str] = []
 
+        # Exact hardware metadata can override model defaults, but an ID with
+        # multiple candidates must expose those candidates rather than the
+        # synthetic "detect-driver" marker.
         for device in evidence:
-            if device.id in DEVICES:
-                selected.append(DEVICES[device.id]["driver"])
+            meta = DEVICES.get(device.id)
+            if not meta:
+                continue
+            selected.extend(meta.get("candidates") or [meta["driver"]])
 
         selected = list(dict.fromkeys(selected + candidates))
         driver_status = {}
@@ -57,14 +62,17 @@ def resolve(system: dict, devices: list[HardwareDevice]) -> list[dict]:
 
     if not components:
         for component, evidence in by_component.items():
+            candidates: list[str] = []
+            for device in evidence:
+                meta = DEVICES.get(device.id)
+                if meta:
+                    candidates.extend(meta.get("candidates") or [meta["driver"]])
             plans.append(
                 {
                     "component": component,
                     "status": "detected",
                     "hardware": [d.to_dict() for d in evidence],
-                    "candidates": list(dict.fromkeys(
-                        DEVICES[d.id]["driver"] for d in evidence if d.id in DEVICES
-                    )),
+                    "candidates": list(dict.fromkeys(candidates)),
                     "selection": "hardware-id",
                     "notes": [],
                 }
