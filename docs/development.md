@@ -26,3 +26,33 @@ lsmod
 ```
 
 Hardware-dependent tests require real Apple machines. CI can additionally cover build-only compatibility.
+
+
+## Distribution adapters
+
+The installer layer is intentionally separated from hardware detection.
+
+Current adapters:
+
+- `apt` — Debian/Ubuntu-family planning.
+- `apt-rpm` — ALT Linux planning.
+- `generic` — fallback when no supported distribution is detected.
+
+Use:
+
+```bash
+maclinux install-plan
+```
+
+The command is strictly read-only. It produces a machine-readable package/header plan and never invokes a package manager.
+
+### Adapter rules
+
+- Hardware modules must not call `apt`, `dnf`, `pacman`, or another package manager directly.
+- An adapter may translate logical requirements into distribution-specific package names and commands.
+- Commands are output as a plan, not executed.
+- Kernel header/devel package names must be validated against the actual distribution and kernel packaging.
+- External drivers must trigger DKMS/header requirements only when the selected integration actually needs them.
+- Mainline-only components should not cause unnecessary DKMS installation.
+
+The next adapter work is Fedora/RPM, Arch/pacman and openSUSE/zypper, followed by Alpine and Gentoo.
