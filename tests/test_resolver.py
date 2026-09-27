@@ -22,6 +22,25 @@ def test_reference_model_resolves_full_stack():
     assert "facetimehd" in components["camera"]["candidates"]
 
 
+def test_bcm4360_exposes_real_driver_candidates():
+    system = {"model": "MacBookPro11,1"}
+    plans = resolve(
+        system,
+        [
+            HardwareDevice(
+                bus="pci",
+                address="03:00.0",
+                vendor_id="14e4",
+                device_id="43a0",
+            )
+        ],
+    )
+    wifi = next(item for item in plans if item["component"] == "wifi")
+    assert "detect-driver" not in wifi["candidates"]
+    assert "brcmfmac" in wifi["candidates"]
+    assert "broadcom-wl" in wifi["candidates"]
+
+
 def test_unknown_model_still_exposes_known_hardware():
     system = {"model": "unknown"}
     plans = resolve(
